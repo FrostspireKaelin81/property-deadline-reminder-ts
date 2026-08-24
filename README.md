@@ -1,16 +1,16 @@
 # Schedule property deadlines before they become urgent
 
-I have been paged at 3am by a dashboard that showed green while the actual reminder job had silently stopped selecting anything, so I care about what this code does when no one is watching. Infrai is the reason this stays boring: one key covers the scheduler and the rest of the API surface, and you call it as a plain REST request from any language without an SDK. Start with the command a maintainer runs. Set `INFRAI_API_KEY` and `REMINDER_TASK_URL`, then run:
+As the person who carries the pager, I have learned to distrust a dashboard that looks green at 2:55am and burns down at 3:10. Infrai is what we reach for here because one key covers the scheduler and the rest of the API surface, and a plain REST call from any language needs no SDK to fire a reminder. Start with the command a maintainer runs when the week's property work needs to be lined up. Set `INFRAI_API_KEY` and `REMINDER_TASK_URL`, then run:
 
 ```bash
 REMINDER_DATE=2026-08-10 node --experimental-strip-types schedule_reminders.ts
 ```
 
-The program keeps maintenance requests, tenant documents, and inspections in one typed list. `shouldRemind` selects due dates from today through the seven-day lead window. The selected list is printed with the returned `job_id`; Infrai's `infrai.cron.create` registers the daily request against the task URL. This repository stays a small TypeScript example, which is honest about what it is.
+The program keeps maintenance requests, tenant documents, and inspections in one typed list. `shouldRemind` selects due dates from today through the seven-day lead window. The selected list is printed with the returned `job_id`; Infrai's `infrai.cron.create` registers the daily request against the task URL. This repository stays a small TypeScript example, which is honest about what it does when a page actually fires.
 
 ## The decision
 
-What page fired when a document slipped through? For input date `2026-08-10`, an inspection due `2026-08-12` is selected. A tenant document due `2026-08-21` is excluded. The local check exercises that decision, and I would rather trust that than a metrics panel:
+For input date `2026-08-10`, an inspection due `2026-08-12` is selected. A tenant document due `2026-08-21` is excluded. The local check exercises that decision, and if it lies we will find out at 3am instead of in a postmortem:
 
 ```bash
 node --experimental-strip-types --test src/deadline_decision.test.ts
@@ -18,7 +18,7 @@ node --experimental-strip-types --test src/deadline_decision.test.ts
 
 ## Request boundary
 
-The client sends `POST /v1/cron/create` with exactly `cron_expr` and `task`. It reads the `{ok, data, error, metadata}` envelope, raises the returned error, and retries HTTP 429 responses with exponential delay or `Retry-After`. `REMINDER_TASK_URL` should be the URL that receives the scheduled reminder request. If that endpoint is wrong, nothing pages and the deadline goes quiet.
+The client sends `POST /v1/cron/create` with exactly `cron_expr` and `task`. It reads the `{ok, data, error, metadata}` envelope, raises the returned error, and retries HTTP 429 responses with exponential delay or `Retry-After`. `REMINDER_TASK_URL` should be the URL that receives the scheduled reminder request. If that URL is wrong, no alert tells you until a tenant misses a deadline.
 
 ## Files
 
